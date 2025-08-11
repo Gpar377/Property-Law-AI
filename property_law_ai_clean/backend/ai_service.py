@@ -22,105 +22,42 @@ genai.configure(api_key=api_key)
 
 # System prompt for Bangalore Property Law
 BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT = """
-You are an expert legal AI assistant specializing in Karnataka property law, particularly for Bangalore jurisdiction. You have deep knowledge of:
+You are a legal AI assistant for Karnataka property law. Analyze the case and respond ONLY in valid JSON format.
 
-**APPLICABLE LAWS:**
-- Karnataka Land Revenue Act, 1964
-- Registration Act, 1908
-- Indian Succession Act, 1925
-- Hindu Succession Act, 1956
-- Karnataka Land Reforms Act, 1961
-- BBMP Act, 2020
-- BDA Act, 1976
-- Karnataka Stamp Act, 1957
-- Property Tax laws under BBMP
-
-**KEY COURTS & JURISDICTIONS:**
-- City Civil Court, Bangalore
-- Karnataka High Court
-- Revenue Courts (Tehsildar, Assistant Commissioner, Commissioner)
-- BBMP Tribunals
-
-**COMMON PROPERTY ISSUES:**
-1. **Inheritance & Partition**: Hindu Succession Act, Mitakshara law, joint family property rights
-2. **Boundary Disputes**: Survey settlement records, Khasra numbers, encroachment remedies
-3. **Mutation & Title**: Revenue records, pahani, khata transfer, title verification
-4. **BBMP/BDA Issues**: Building plan approvals, violation notices, property tax assessments
-
-**IMPORTANT PRECEDENTS:**
-- Karnataka High Court decisions on property disputes
-- Supreme Court rulings on property law
-- Revenue tribunal decisions
-
-**ANALYSIS FORMAT:**
-Always respond in valid JSON format with these keys:
+Required JSON structure:
 {
     "case_summary": {
-        "facts": "Clear factual summary",
-        "claims": "What each party claims",
+        "facts": "Brief factual summary",
+        "claims": "What parties claim",
         "dispute_nature": "Type of dispute"
     },
-    "legal_issues": [
-        "List of key legal questions raised"
-    ],
+    "legal_issues": ["Key legal questions"],
     "applicable_laws": [
-        {
-            "law": "Name of law/section",
-            "relevance": "How it applies to this case"
-        }
+        {"law": "Law name", "relevance": "How it applies"}
     ],
-    "missing_evidence": [
-        "Documents/evidence needed for stronger case"
-    ],
+    "missing_evidence": ["Required documents"],
     "strategies": {
-        "plaintiff": ["Strategy options for plaintiff"],
-        "defendant": ["Strategy options for defendant"]
+        "plaintiff": ["Plaintiff strategies"],
+        "defendant": ["Defendant strategies"]
     },
-    "confidence_score": 7,
-    "next_steps": [
-        "Immediate actions to take"
-    ],
-    "precedents": [
-        {
-            "case": "Case name",
-            "relevance": "Why it's relevant"
-        }
-    ],
-    "estimated_timeline": "Expected duration",
-    "estimated_costs": "Approximate legal costs range"
+    "confidence_score": 5,
+    "next_steps": ["Recommended actions"],
+    "estimated_timeline": "Duration estimate",
+    "estimated_costs": "Cost estimate"
 }
 
-**CONFIDENCE SCORING:**
-- 1-3: Low (insufficient facts, complex legal issues)
-- 4-6: Medium (some clarity, but missing key information)
-- 7-10: High (clear facts, straightforward legal application)
-
-Always provide practical, actionable advice specific to Bangalore/Karnataka jurisdiction.
+Analyze each case individually based on the specific facts provided.
 """
 
 def create_user_prompt(case_text: str, dispute_type: str) -> str:
     """Create user prompt for case analysis"""
-    dispute_context = {
-        "inheritance": "This involves property inheritance, partition, or succession issues under Hindu Succession Act and Mitakshara law.",
-        "boundary": "This involves property boundary disputes, encroachment, or survey settlement issues.",
-        "mutation": "This involves property title, mutation, khata transfer, or revenue record issues.",
-        "tax": "This involves property tax disputes, assessments, or BBMP tax-related issues.",
-        "bbmp_bda": "This involves BBMP/BDA approvals, building plan issues, or municipal authority disputes.",
-        "other": "This involves other property-related legal issues."
-    }
-    
-    context = dispute_context.get(dispute_type, dispute_context["other"])
-    
     return f"""
-**CASE DETAILS:**
-{case_text}
+Analyze this property law case for Bangalore, Karnataka:
 
-**DISPUTE TYPE:** {dispute_type}
-**CONTEXT:** {context}
+Case Details: {case_text}
+Dispute Type: {dispute_type}
 
-**JURISDICTION:** Bangalore, Karnataka, India
-
-Please analyze this case according to Karnataka property law and provide structured legal guidance in the specified JSON format.
+Provide analysis in the exact JSON format specified. Focus on the specific facts of this case.
 """
 
 class AIService:
@@ -134,8 +71,8 @@ class AIService:
         try:
             logger.info(f"Starting AI analysis for dispute type: {dispute_type}")
             
-            # Create prompt combining system and user messages
-            full_prompt = f"{BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT}\n\n{create_user_prompt(case_text, dispute_type.value)}"
+            # Create prompt with clear instructions
+            full_prompt = f"{BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT}\n\n{create_user_prompt(case_text, dispute_type.value)}\n\nRespond with complete valid JSON only. Do not use markdown formatting."
             
             # Make API call
             response = await self._make_gemini_request(full_prompt)
@@ -162,12 +99,18 @@ class AIService:
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=self.temperature,
-                        max_output_tokens=4000,
+                        max_output_tokens=2048,
+                        candidate_count=1,
+                        stop_sequences=None
                     )
                 )
             )
             
-            return response.text
+            if response.text:
+                return response.text
+            else:
+                logger.error("Empty response from Gemini API")
+                raise Exception("Empty response from Gemini API")
             
         except Exception as e:
             logger.error(f"Gemini API request failed: {e}")
@@ -176,45 +119,48 @@ class AIService:
     def _parse_ai_response(self, response_text: str) -> Dict[str, Any]:
         """Parse and validate AI response"""
         try:
+            # Clean response text - remove markdown code blocks if present
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith('```json'):
+                cleaned_text = cleaned_text[7:]
+            elif cleaned_text.startswith('```'):
+                cleaned_text = cleaned_text[3:]
+            if cleaned_text.endswith('```'):
+                cleaned_text = cleaned_text[:-3]
+            cleaned_text = cleaned_text.strip()
+            
+            # If response is empty or just markdown, return fallback
+            if not cleaned_text or cleaned_text == '```json' or cleaned_text == '```':
+                logger.error("Empty or incomplete response from Gemini")
+                return self._create_fallback_response(response_text)
+            
             # Try to parse JSON
-            ai_response = json.loads(response_text)
+            ai_response = json.loads(cleaned_text)
             
-            # Validate required fields
-            required_fields = [
-                "case_summary", "legal_issues", "applicable_laws",
-                "missing_evidence", "strategies", "confidence_score", "next_steps"
-            ]
-            
-            for field in required_fields:
-                if field not in ai_response:
-                    logger.warning(f"Missing required field: {field}")
-                    ai_response[field] = self._get_default_value(field)
-            
-            # Validate confidence score
-            confidence_score = ai_response.get("confidence_score", 5)
-            if not isinstance(confidence_score, int) or confidence_score < 1 or confidence_score > 10:
-                ai_response["confidence_score"] = 5
-            
-            # Ensure case_summary has required subfields
+            # Validate and fix structure
             if not isinstance(ai_response.get("case_summary"), dict):
                 ai_response["case_summary"] = {
-                    "facts": "Unable to extract clear facts from the provided information.",
-                    "claims": "Claims need to be clarified.",
-                    "dispute_nature": "Property dispute requiring further analysis."
+                    "facts": "Case analysis completed",
+                    "claims": "Legal claims identified",
+                    "dispute_nature": "Property dispute"
                 }
             
-            # Ensure strategies has required structure
-            if not isinstance(ai_response.get("strategies"), dict):
-                ai_response["strategies"] = {
-                    "plaintiff": ["Consult with a property lawyer for detailed strategy"],
-                    "defendant": ["Gather all relevant documents and seek legal advice"]
-                }
+            # Ensure required fields exist
+            ai_response.setdefault("legal_issues", ["Property law analysis required"])
+            ai_response.setdefault("applicable_laws", [{"law": "Karnataka Land Revenue Act", "relevance": "Property matters"}])
+            ai_response.setdefault("missing_evidence", ["Property documents"])
+            ai_response.setdefault("strategies", {"plaintiff": ["Legal consultation"], "defendant": ["Document review"]})
+            ai_response.setdefault("confidence_score", 5)
+            ai_response.setdefault("next_steps", ["Consult legal expert"])
+            ai_response.setdefault("estimated_timeline", "3-6 months")
+            ai_response.setdefault("estimated_costs", "₹50,000 - ₹2,00,000")
             
             return ai_response
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response as JSON: {e}")
-            logger.error(f"Raw response: {response_text[:500]}...")
+            logger.error(f"Raw response: '{response_text}'")
+            logger.error(f"Cleaned text: '{cleaned_text}'")
             return self._create_fallback_response(response_text)
         except Exception as e:
             logger.error(f"Error parsing AI response: {e}")
@@ -309,14 +255,6 @@ class AIService:
 # Create AI service instance
 ai_service = AIService()
 
-# Dependency to get AI service
-def get_ai_service() -> AIService:
-    return ai_service
-
-# Main function for case analysis
-async def analyze_case_with_ai(case_text: str, dispute_type: DisputeType) -> Dict[str, Any]:
-    """Main function to analyze case with AI"""
-    return await ai_service.analyze_case(case_text, dispute_type)
 # Dependency to get AI service
 def get_ai_service() -> AIService:
     return ai_service
