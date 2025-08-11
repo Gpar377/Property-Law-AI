@@ -6,9 +6,9 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import logging
+from pydantic import BaseModel
 
 from models import User, UserCreate, UserLogin, Token, TokenData, UserInDB
-from pydantic import BaseModel
 from database import get_database, Database
 
 load_dotenv()
@@ -29,6 +29,9 @@ security = HTTPBearer()
 
 # Router
 router = APIRouter()
+
+class DeleteAccountRequest(BaseModel):
+    password: str
 
 # Utility functions
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -190,96 +193,6 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
     return current_user
 
-@router.post("/logout")
-async def logout(current_user: User = Depends(get_current_user)):
-    """Logout user (client should remove token)"""
-    logger.info(f"User logged out: {current_user.email}")
-    return {"message": "Successfully logged out"}
-
-@router.put("/profile", response_model=User)
-async def update_profile(
-    name: str,
-    current_user: User = Depends(get_current_user),
-    db: Database = Depends(get_database)
-):
-    """Update user profile"""
-    try:
-        # Update user data
-        update_data = {"name": name}
-        updated_user = await db.update_user(current_user.id, update_data)
-        
-        if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        logger.info(f"User profile updated: {current_user.email}")
-        
-        return User(
-            id=updated_user["id"],
-            email=updated_user["email"],
-            name=updated_user["name"],
-            created_at=updated_user["created_at"],
-            updated_at=updated_user.get("updated_at")
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Profile update error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Profile update failed"
-        )
-
-@router.post("/change-password")
-async def change_password(
-    current_password: str,
-    new_password: str,
-    current_user: User = Depends(get_current_user),
-    db: Database = Depends(get_database)
-):
-    """Change user password"""
-    try:
-        # Get user with password
-        user_data = await db.get_user_by_id(current_user.id)
-        if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Verify current password
-        if not verify_password(current_password, user_data["hashed_password"]):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect current password"
-            )
-        
-        # Hash new password
-        new_hashed_password = get_password_hash(new_password)
-        
-        # Update password
-        update_data = {"hashed_password": new_hashed_password}
-        await db.update_user(current_user.id, update_data)
-        
-        logger.info(f"Password changed for user: {current_user.email}")
-        
-        return {"message": "Password changed successfully"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Password change error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Password change failed"
-        )
-
-class DeleteAccountRequest(BaseModel):
-    password: str
-
 @router.delete("/delete-account")
 async def delete_account(
     request: DeleteAccountRequest,
@@ -316,7 +229,5 @@ async def delete_account(
         logger.error(f"Account deletion error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Account deletion failed"
-        )
             detail="Account deletion failed"
         )
