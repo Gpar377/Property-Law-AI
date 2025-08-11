@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Law AI Assistant - Bangalore</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-balance-scale"></i>
+                <span>Property Law AI</span>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#analyze" class="nav-link">Analyze Case</a>
+                <a href="#cases" class="nav-link">My Cases</a>
+                <a href="#about" class="nav-link">About</a>
+                <div class="auth-buttons">
+                    <button class="btn btn-outline" id="loginBtn">Login</button>
+                    <button class="btn btn-primary" id="registerBtn">Register</button>
+                    <div class="user-menu" id="userMenu" style="display: none;">
+                        <span id="userName"></span>
+                        <button class="btn btn-outline" id="logoutBtn">Logout</button>
+                    </div>
+                </div>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>AI-Powered Property Law Assistant</h1>
+            <p>Get expert legal analysis for Bangalore property disputes using advanced AI technology</p>
+            <div class="hero-features">
+                <div class="feature">
+                    <i class="fas fa-gavel"></i>
+                    <span>Karnataka Law Expert</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-robot"></i>
+                    <span>AI-Powered Analysis</span>
+                </div>
+                <div class="feature">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Detailed Reports</span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-large" onclick="scrollToSection('analyze')">
+                Analyze Your Case
+            </button>
+        </div>
+    </section>
+
+    <!-- Case Analysis Section -->
+    <section id="analyze" class="analyze-section">
+        <div class="container">
+            <h2>Analyze Your Property Case</h2>
+            <p>Describe your property dispute and get AI-powered legal analysis</p>
+            
+            <form id="caseForm" class="case-form">
+                <div class="form-group">
+                    <label for="caseTitle">Case Title</label>
+                    <input type="text" id="caseTitle" name="title" required 
+                           placeholder="Brief title for your case">
+                </div>
+
+                <div class="form-group">
+                    <label for="disputeType">Dispute Type</label>
+                    <select id="disputeType" name="dispute_type" required>
+                        <option value="">Select dispute type</option>
+                        <option value="inheritance">Inheritance & Partition</option>
+                        <option value="boundary">Boundary Disputes</option>
+                        <option value="mutation">Mutation & Title Issues</option>
+                        <option value="tax">Property Tax Issues</option>
+                        <option value="bbmp_bda">BBMP/BDA Issues</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="caseText">Case Details</label>
+                    <textarea id="caseText" name="case_text" required rows="8"
+                              placeholder="Describe your property dispute in detail. Include:
+- Property location and details
+- Parties involved
+- Timeline of events
+- Documents you have
+- Specific issues or claims"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="documents">Supporting Documents (Optional)</label>
+                    <input type="file" id="documents" name="documents" multiple 
+                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    <small>Upload property documents, agreements, court papers, etc.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large" id="analyzeBtn">
+                    <i class="fas fa-search"></i>
+                    Analyze Case
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results" class="results-section" style="display: none;">
+        <div class="container">
+            <div class="results-header">
+                <h2>Legal Analysis Results</h2>
+                <div class="confidence-score">
+                    <span>Confidence Score:</span>
+                    <div class="score-circle" id="confidenceScore">0</div>
+                </div>
+            </div>
+
+            <div class="results-content" id="resultsContent">
+                <!-- Results will be populated by JavaScript -->
+            </div>
+
+            <div class="results-actions">
+                <button class="btn btn-primary" id="downloadPdfBtn">
+                    <i class="fas fa-download"></i>
+                    Download PDF Report
+                </button>
+                <button class="btn btn-outline" onclick="scrollToSection('analyze')">
+                    Analyze Another Case
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cases History Section -->
+    <section id="cases" class="cases-section">
+        <div class="container">
+            <h2>My Cases</h2>
+            <div class="cases-grid" id="casesGrid">
+                <!-- Cases will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2>About Property Law AI</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>Our AI assistant specializes in Karnataka property law, particularly for Bangalore jurisdiction. 
+                    It provides expert analysis based on:</p>
+                    <ul>
+                        <li>Karnataka Land Revenue Act, 1964</li>
+                        <li>Registration Act, 1908</li>
+                        <li>Hindu Succession Act, 1956</li>
+                        <li>BBMP Act, 2020</li>
+                        <li>BDA Act, 1976</li>
+                        <li>Recent court precedents</li>
+                    </ul>
+                </div>
+                <div class="about-features">
+                    <div class="feature-card">
+                        <i class="fas fa-brain"></i>
+                        <h3>AI-Powered</h3>
+                        <p>Advanced AI trained on Karnataka property law</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <h3>Bangalore Focused</h3>
+                        <p>Specialized knowledge of local regulations</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-clock"></i>
+                        <h3>Instant Analysis</h3>
+                        <p>Get legal insights in minutes, not days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Property Law AI Assistant. For educational purposes only. Consult a qualified lawyer for legal advice.</p>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Analyzing your case...</p>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <div class="auth-tabs">
+                <button class="tab-btn active" data-tab="login">Login</button>
+                <button class="tab-btn" data-tab="register">Register</button>
+            </div>
+            
+            <form id="loginForm" class="auth-form">
+                <h3>Login to Your Account</h3>
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+
+            <form id="registerForm" class="auth-form" style="display: none;">
+                <h3>Create New Account</h3>
+                <div class="form-group">
+                    <input type="text" name="name" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="email" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
