@@ -1,4 +1,4 @@
-from openai import OpenAI
+import google.generativeai as genai
 import json
 import os
 from dotenv import load_dotenv
@@ -11,14 +11,14 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Configure OpenAI
-api_key = os.getenv("OPENAI_API_KEY")
+# Configure Gemini
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    raise ValueError("OPENAI_API_KEY must be set in environment variables")
+    raise ValueError("GEMINI_API_KEY must be set in environment variables")
 
-# Create OpenAI client
-openai_client = OpenAI(api_key=api_key)
+# Configure Gemini
+genai.configure(api_key=api_key)
 
 # System prompt for Bangalore Property Law
 BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT = """
@@ -125,30 +125,20 @@ Please analyze this case according to Karnataka property law and provide structu
 
 class AIService:
     def __init__(self):
-        self.client = openai_client
-        self.model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-        self.max_tokens = 4000
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.model = genai.GenerativeModel(self.model_name)
         self.temperature = 0.3
 
     async def analyze_case(self, case_text: str, dispute_type: DisputeType) -> Dict[str, Any]:
-        """Analyze case using OpenAI GPT-4"""
+        """Analyze case using Google Gemini"""
         try:
             logger.info(f"Starting AI analysis for dispute type: {dispute_type}")
             
-            # Create messages
-            messages = [
-                {
-                    "role": "system",
-                    "content": BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT
-                },
-                {
-                    "role": "user",
-                    "content": create_user_prompt(case_text, dispute_type.value)
-                }
-            ]
+            # Create prompt combining system and user messages
+            full_prompt = f"{BANGALORE_PROPERTY_LAW_SYSTEM_PROMPT}\n\n{create_user_prompt(case_text, dispute_type.value)}"
             
             # Make API call
-            response = await self._make_openai_request(messages)
+            response = await self._make_gemini_request(full_prompt)
             
             # Parse response
             ai_response = self._parse_ai_response(response)
@@ -161,26 +151,27 @@ class AIService:
             logger.error(f"AI analysis failed: {e}")
             raise Exception(f"AI analysis failed: {str(e)}")
 
-    async def _make_openai_request(self, messages: list) -> str:
-        """Make request to OpenAI API"""
+    async def _make_gemini_request(self, prompt: str) -> str:
+        """Make request to Gemini API"""
         try:
-            # Use asyncio to run the synchronous OpenAI call
+            # Use asyncio to run the synchronous Gemini call
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
-                lambda: self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens
+                lambda: self.model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=self.temperature,
+                        max_output_tokens=4000,
+                    )
                 )
             )
             
-            return response.choices[0].message.content
+            return response.text
             
         except Exception as e:
-            logger.error(f"OpenAI API request failed: {e}")
-            raise Exception(f"OpenAI API request failed: {str(e)}")
+            logger.error(f"Gemini API request failed: {e}")
+            raise Exception(f"Gemini API request failed: {str(e)}")
 
     def _parse_ai_response(self, response_text: str) -> Dict[str, Any]:
         """Parse and validate AI response"""
@@ -223,6 +214,7 @@ class AIService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response as JSON: {e}")
+            logger.error(f"Raw response: {response_text[:500]}...")
             return self._create_fallback_response(response_text)
         except Exception as e:
             logger.error(f"Error parsing AI response: {e}")
@@ -317,6 +309,14 @@ class AIService:
 # Create AI service instance
 ai_service = AIService()
 
+# Dependency to get AI service
+def get_ai_service() -> AIService:
+    return ai_service
+
+# Main function for case analysis
+async def analyze_case_with_ai(case_text: str, dispute_type: DisputeType) -> Dict[str, Any]:
+    """Main function to analyze case with AI"""
+    return await ai_service.analyze_case(case_text, dispute_type)
 # Dependency to get AI service
 def get_ai_service() -> AIService:
     return ai_service
