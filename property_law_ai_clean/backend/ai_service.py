@@ -126,7 +126,7 @@ Please analyze this case according to Karnataka property law and provide structu
 class AIService:
     def __init__(self):
         self.client = openai_client
-        self.model = "gpt-4"
+        self.model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
         self.max_tokens = 4000
         self.temperature = 0.3
 
