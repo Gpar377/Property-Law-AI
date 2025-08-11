@@ -96,6 +96,17 @@ class Database:
             logger.error(f"Error updating user: {e}")
             return None
 
+    async def delete_user(self, user_id: str) -> bool:
+        """Delete user and all associated data"""
+        try:
+            # Delete user (cascade will handle cases and documents)
+            result = self.client.table("users").delete().eq("id", user_id).execute()
+            return bool(result.data)
+            
+        except Exception as e:
+            logger.error(f"Error deleting user: {e}")
+            return False
+
     # Case operations
     async def create_case(self, case_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new case"""
