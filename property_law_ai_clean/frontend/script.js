@@ -10,8 +10,13 @@ const elements = {
     loginBtn: document.getElementById('loginBtn'),
     registerBtn: document.getElementById('registerBtn'),
     logoutBtn: document.getElementById('logoutBtn'),
+    deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     userMenu: document.getElementById('userMenu'),
     userName: document.getElementById('userName'),
+    deleteAccountModal: document.getElementById('deleteAccountModal'),
+    deleteAccountForm: document.getElementById('deleteAccountForm'),
+    closeDeleteModal: document.getElementById('closeDeleteModal'),
+    cancelDeleteBtn: document.getElementById('cancelDeleteBtn'),
     authModal: document.getElementById('authModal'),
     closeModal: document.getElementById('closeModal'),
     loginForm: document.getElementById('loginForm'),
@@ -57,12 +62,16 @@ function setupEventListeners() {
     elements.loginBtn.addEventListener('click', () => openAuthModal('login'));
     elements.registerBtn.addEventListener('click', () => openAuthModal('register'));
     elements.logoutBtn.addEventListener('click', logout);
+    elements.deleteAccountBtn.addEventListener('click', openDeleteAccountModal);
     
     // Modal
     elements.closeModal.addEventListener('click', closeAuthModal);
     window.addEventListener('click', (e) => {
         if (e.target === elements.authModal) {
             closeAuthModal();
+        }
+        if (e.target === elements.deleteAccountModal) {
+            closeDeleteAccountModal();
         }
     });
     
@@ -77,6 +86,9 @@ function setupEventListeners() {
     // Auth forms
     elements.loginForm.addEventListener('submit', handleLogin);
     elements.registerForm.addEventListener('submit', handleRegister);
+    elements.deleteAccountForm.addEventListener('submit', handleDeleteAccount);
+    elements.closeDeleteModal.addEventListener('click', closeDeleteAccountModal);
+    elements.cancelDeleteBtn.addEventListener('click', closeDeleteAccountModal);
     
     // Case form
     elements.caseForm.addEventListener('submit', handleCaseSubmission);
@@ -257,6 +269,53 @@ function updateAuthUI() {
 
 function checkAuthStatus() {
     updateAuthUI();
+}
+
+// Delete Account Functions
+function openDeleteAccountModal() {
+    elements.deleteAccountModal.style.display = 'block';
+}
+
+function closeDeleteAccountModal() {
+    elements.deleteAccountModal.style.display = 'none';
+    elements.deleteAccountForm.reset();
+}
+
+async function handleDeleteAccount(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const password = formData.get('password');
+    
+    if (!confirm('Are you absolutely sure? This will permanently delete your account and all your cases.')) {
+        return;
+    }
+    
+    try {
+        showLoading('Deleting account...');
+        const response = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Account deleted successfully', 'success');
+            logout();
+            closeDeleteAccountModal();
+        } else {
+            showNotification(data.detail || 'Failed to delete account', 'error');
+        }
+    } catch (error) {
+        console.error('Delete account error:', error);
+        showNotification(`Network error: ${error.message}`, 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
 // Case Analysis Functions
