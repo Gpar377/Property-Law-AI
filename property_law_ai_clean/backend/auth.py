@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import logging
 
 from models import User, UserCreate, UserLogin, Token, TokenData, UserInDB
+from pydantic import BaseModel
 from database import get_database, Database
 
 load_dotenv()
@@ -276,9 +277,12 @@ async def change_password(
             detail="Password change failed"
         )
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
 @router.delete("/delete-account")
 async def delete_account(
-    password: str,
+    request: DeleteAccountRequest,
     current_user: User = Depends(get_current_user),
     db: Database = Depends(get_database)
 ):
@@ -293,7 +297,7 @@ async def delete_account(
             )
         
         # Verify password
-        if not verify_password(password, user_data["hashed_password"]):
+        if not verify_password(request.password, user_data["hashed_password"]):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect password"
@@ -312,5 +316,7 @@ async def delete_account(
         logger.error(f"Account deletion error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Account deletion failed"
+        )
             detail="Account deletion failed"
         )
