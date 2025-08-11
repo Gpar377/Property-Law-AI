@@ -40,12 +40,19 @@ Required JSON structure:
         "plaintiff": ["Plaintiff strategies"],
         "defendant": ["Defendant strategies"]
     },
-    "confidence_score": 5,
+    "confidence_score": 7,
     "next_steps": ["Recommended actions"],
     "estimated_timeline": "Duration estimate",
     "estimated_costs": "Cost estimate"
 }
 
+Confidence Score Guidelines:
+- 8-10: Clear facts, straightforward law, minimal missing evidence
+- 6-7: Good facts, established law, some missing documents
+- 4-5: Adequate facts, complex issues, significant missing evidence
+- 1-3: Unclear facts, very complex legal issues, major gaps
+
+For inheritance cases with clear family structure and established law, score should be 6-8.
 Analyze each case individually based on the specific facts provided.
 """
 
@@ -150,7 +157,12 @@ class AIService:
             ai_response.setdefault("applicable_laws", [{"law": "Karnataka Land Revenue Act", "relevance": "Property matters"}])
             ai_response.setdefault("missing_evidence", ["Property documents"])
             ai_response.setdefault("strategies", {"plaintiff": ["Legal consultation"], "defendant": ["Document review"]})
-            ai_response.setdefault("confidence_score", 5)
+            # Ensure confidence score is reasonable
+            confidence = ai_response.get("confidence_score", 6)
+            if isinstance(confidence, (int, float)) and 1 <= confidence <= 10:
+                ai_response["confidence_score"] = int(confidence)
+            else:
+                ai_response["confidence_score"] = 6
             ai_response.setdefault("next_steps", ["Consult legal expert"])
             ai_response.setdefault("estimated_timeline", "3-6 months")
             ai_response.setdefault("estimated_costs", "₹50,000 - ₹2,00,000")
